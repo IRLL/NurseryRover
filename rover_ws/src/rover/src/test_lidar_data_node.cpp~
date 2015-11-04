@@ -1,0 +1,75 @@
+
+/*
+ * References:
+ * 
+ * 
+ *
+*/
+
+/*
+ * Variable references:
+ *	msg[0] is count
+ *	msg[1] is theta
+ *	msg[2] is degree from 0-180
+ *	msg[3] is degree from 180-360
+ *
+*/
+
+#include <ros/ros.h>
+
+//Image Analysis
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+
+int main(int argc, char** argv)
+{
+	ros::init(argc, argv, "lidar_data_node");
+
+	ros::NodeHandle nh;
+	image_transport::ImageTransport it(nh);
+	image_transport::Publisher pub = it.advertise("/test_image", 1);
+	
+	//Create image
+	cv::Mat image = cv::Mat::zeros(800, 800, CV_8UC3);
+	image.setTo(cv::Scalar(255, 255, 255));
+
+	for(int i = 1; i <= 4; i++)
+	{
+		cv::circle(image, cv::Point(200, (i * 100)), 3, cv::Scalar(0, 0, 255), -1, 8, 0);
+	}
+
+	for(int i = 1; i <= 4; i++)
+	{
+		cv::circle(image, cv::Point(600, (i * 100)), 3, cv::Scalar(0, 0, 255), -1, 8, 0);
+	}
+
+	//Convert to message	
+	sensor_msgs::ImagePtr image_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+	
+	ros::Rate loop_rate(30);
+
+	while(nh.ok())
+	{
+		pub.publish(image_ptr);
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
