@@ -26,3 +26,7 @@
 *.exe
 *.out
 *.app
+
+# Ros Files
+rover_ws/build
+rover_ws/devel
