@@ -111,6 +111,7 @@ public:
 	}
 	void converterCallback(const std_msgs::String::ConstPtr& msg)
 	{
+	  
 		//Convert data from string to double
 		//String splitter
 	  std::stringstream ss(msg->data.c_str());

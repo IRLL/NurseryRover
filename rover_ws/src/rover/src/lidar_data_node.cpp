@@ -10,8 +10,8 @@
  * Variable references:
  *	msg[0] is count
  *	msg[1] is theta
- *	msg[2] is degree from 0-180
- *	msg[3] is degree from 180-360
+ *	msg[2] is distance from 0-180
+ *	msg[3] is distance from 180-360
  *
 */
 
@@ -163,7 +163,7 @@ public:
 			{
 			  checkCluster(rear);
 			  addPointToCluster(rear);
-			}  
+			}
 		}
 	}
 
@@ -173,8 +173,8 @@ private:
 	{
 	  cv::Point2f point;
 	  
-	  //dirction = 1 when facing forward
-	  if(direction == 1)
+	  //dirction = front when facing forward
+	  if(direction == front)
 	  {
 	   //check distances to see if this is a new cluster
 	    for(int i = 0; i < frontCluster.size(); i++)
@@ -225,7 +225,7 @@ private:
 	  int sampleCount;
 	  
 		    
-	  if(direction == 1)
+	  if(direction == front)
 	  {
 	    sampleCount = frontCluster.size();
 	    
@@ -236,6 +236,9 @@ private:
 	    
 	    //Clear cluster to start fresh
 	    frontCluster.clear();
+	    
+	    //Draw lines between points
+	    processPoints(direction);
 	  }
 	  else
 	  {
@@ -255,13 +258,13 @@ private:
 	}
 	void processPoints(int direction)
 	{
-	  if(direction == 1)
+	  if(direction == front)
 	  {
 	    //check if more than two points
 	    if(frontPoints.size() > 1)
 	    {
-	      cv::Point2f oldPoint = frontPoints[frontPoints.size() - 1];
-	      cv::Point2f newPoint = frontPoints[frontPoints.size() - 2];
+	      cv::Point2f newPoint = frontPoints[frontPoints.size() - 1];
+	      cv::Point2f oldPoint = frontPoints[frontPoints.size() - 2];
 	      
 	      double pointDistance = calculateDistance(oldPoint, newPoint);
 		
@@ -307,7 +310,7 @@ private:
 	  point.x = object_cols;
 	  point.y = object_rows;
 	  
-	  if(direction == 1)
+	  if(direction == front)
 	    frontCluster.push_back(point);
 	  else
 	    rearCluster.push_back(point);
@@ -315,43 +318,13 @@ private:
 	
 	void calculatePoint(int deg, int dis)
 	{
-	  int temp_distance;
+	  object_cols = 400 + (dis * cos(deg * (M_PI / 180)));
+	  object_rows = 400 - (dis * sin(deg * (M_PI / 180)));
 	  
-		//Get point_rows
-		if(deg > 180)
-		{
-		      //Front of rover
-		      object_rows = 400 - (dis * cos(deg) + .5);
-		}
-		else
-		{
-		      //Rear of rover
-		      object_rows = 400 + (dis * cos(deg) + .5);
-		}
-		
-		//Get point_cols
-		if(deg < 90)
-		{
-		      //Left side of rover
-		      temp_distance = dis * sin(deg) + .5;
-		      
-		      //Checks if object is out of range
-		      if(temp_distance <= max_distance)
-			object_cols = 400 - temp_distance;
-		      else
-			object_cols = 0;
-		}
-		else
-		{
-		      //Right side of rover
-		      temp_distance = dis * sin(deg) + .5;
-		      
-		      //Checks if object is out of range
-		      if(temp_distance <= max_distance)
-			object_cols = 400 + temp_distance;
-		      else
-			object_cols = 0;
-		}
+	  if(!(object_cols > (max_distance + rover_cols) && object_cols < (rover_cols - max_distance)))
+	  {
+	    object_cols = 0;
+	  }
 	}
 	void sendImage()
 	{
