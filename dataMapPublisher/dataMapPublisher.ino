@@ -54,7 +54,7 @@ void setup()
   nh.initNode();
   nh.advertise(pub);
   
-  Herkulex.beginSerial1(115200);
+  Herkulex.beginSerial2(115200);
   Herkulex.reboot(servoID);
   
   //Set up servo
@@ -72,11 +72,11 @@ void setup()
   digitalWrite(4,HIGH); //Turn sensor on5760
   digitalWrite(2, LOW); // Set trigger LOW for continuous read
 
-  pinMode(8, OUTPUT); // Set pin 8 as trigger pin
-  pinMode(9, INPUT); // Set pin 9 as monitor pin
+  pinMode(5, OUTPUT); // Set pin 8 as trigger pin
+  pinMode(6, INPUT); // Set pin 9 as monitor pin
   pinMode(7, OUTPUT); // Set pin 7 to control power enable line
   digitalWrite(7,HIGH); //Turn sensor on
-  digitalWrite(8, LOW); // Set trigger LOW for continuous read
+  digitalWrite(6, LOW); // Set trigger LOW for continuous read
 }
 
 void loop()
@@ -89,7 +89,7 @@ void loop()
     Herkulex.moveOneAngle(servoID, deg, 1000, LED_RED);
     
     //Get lidar data
-    //getLidarData();
+    getLidarData();
   
     //Get servo degree
     getServoData();
@@ -100,7 +100,7 @@ void loop()
     //Publish data
     pub.publish(&message); 
     
-    delay(100);
+    delay(50);
     
     nh.spinOnce();
   }
@@ -111,7 +111,7 @@ void loop()
     Herkulex.moveOneAngle(servoID, deg, 1000, LED_RED);
     
     //Get lidar data
-    //getLidarData();
+    getLidarData();
   
     //Get servo degree
     getServoData();
@@ -122,7 +122,7 @@ void loop()
     //Publish data
     pub.publish(&message); 
     
-    delay(100);
+    delay(50);
     
     nh.spinOnce();
   }
@@ -157,7 +157,7 @@ void assignData()
 void getLidarData()
 {
   pulse_widthL = pulseIn(3, HIGH);
-  pulse_widthR = pulseIn(9, HIGH);
+  pulse_widthR = pulseIn(6, HIGH);
   
   if(pulse_widthL != 0 && pulse_widthR != 0){ // If we get a reading that isn't zero, let's print it
     pulse_widthL = (pulse_widthL/10) - 28; // 10usec = 1 cm of distance for LIDAR-Lite
@@ -185,11 +185,6 @@ void getLidarData()
     digitalWrite(7,HIGH); //Turn on te sensor 2
     delay(1); //Wait 1ms for it to turn on.
   }
-}
-void setServoDegree(int deg)
-{
-  Herkulex.moveOneAngle(servoID, degree, 1000, LED_RED);
-  
 }
 void getServoData()
 {
