@@ -52,12 +52,7 @@ private:
 	double data[4];
 	
 	//Clusters
-	std::vector<cv::Point2f> frontCluster;
-	std::vector<cv::Point2f> rearCluster;
-	
-	//Points
-	std::vector<cv::Point2f> frontPoints;
-	std::vector<cv::Point2f> rearPoints;
+	std::vector<cv::Point2f> Cluster;
 	
 	//values
 	int front;
@@ -100,7 +95,7 @@ public:
 
 		//Initialize max max_distance
 		maxPointDifference = 20;
-		max_distance = 400;
+		max_distance = 200;
 
 		program_start = true;
 		pub = _it.advertise("/lidar_data_node/output_image", 1);
@@ -121,39 +116,81 @@ public:
 	  {
 	    data[temp_count] = std::atof(token.c_str());
 	  }
-		
+
+//Representing start of program and initializing count 
+		if(program_start == true)
+		{
+			count = data[0];
+			
+			//Setting start as untrue
+			program_start = false;
+		}
+		else
+		{
+			//If we are starting a new set of points
+			if(count != data[0])
+			{
+				count = data[0];
+				evaluateCluster();
+				
+				sendImage();
+				
+				//Reinitialize image to zeros
+				image.setTo(cv::Scalar(255, 255, 255));
+				
+				//Reset Points and Cluster
+				Cluster.clear();
+			}
 			
 			//Draw points on image
 			//From 0-180 degrees
 			
 			calculatePoint(data[1], data[2]);
 			
-			//if(object_cols != 0)
-			cv::circle(image, cv::Point(object_cols, object_rows), 3, cv::Scalar(0,0,255), CV_FILLED, 8, 0);
-			
 			//From 180-360 degrees
 			calculatePoint(data[1] + 180, data[3]);
 			
-			//if(object_cols != 0)
-			cv::circle(image, cv::Point(object_cols, object_rows), 3, cv::Scalar(0,0,255), CV_FILLED, 8, 0);
-
+		}
 			
 
 //ROS_INFO("dis = %d	cos = %d	sin = %d", int(data[3]), int(data[3] * cos(90 * (M_PI / 180))), int(data[3] * sin(90  * (M_PI / 180))));
-
-	
-			
-			//Show Image
-		cv::imshow(OPENCV_WINDOW, image);
-		
-		cvWaitKey(1);
 	}
 
 private:	
+	void evaluateCluster()
+	{
+	  int K = 2, attempts = 3, flags = cv::KMEANS_PP_CENTERS;
+	  cv::Mat labels, centers;
+	  cv::Point2f tempPoint;
+	  cv::Mat points(Cluster.size(), 2, CV_32F);
+	  
+	  for(int i = 0; i < Cluster.size(); i++)
+	  {
+	    tempPoint = Cluster[i];
+	    points.at<float>(i, 0) = tempPoint.x;
+	    points.at<float>(i, 1) = tempPoint.y;
+	  }
+	  
+	  cv::kmeans(points,K,labels,cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0),attempts,flags, centers);
+	  
+	  for(int i = 0; i < 4; i++)
+	  {
+	   int idx = labels.at<int>(i);
+	   tempPoint.x = centers.at<float>(idx, 0);
+	   tempPoint.y = centers.at<float>(idx, 1);
+	   //ROS_INFO("%d", );
+	   cv::circle(image, tempPoint, 3, cv::Scalar(0,0,255), CV_FILLED, 8, 0);
+	  }
+	}
 	void calculatePoint(int deg, int dis)
 	{
 	  object_cols = 400 + (dis * cos(deg * (M_PI / 180)));
 	  object_rows = 400 - (dis * sin(deg * (M_PI / 180)));
+	  
+	  if(!((object_cols > (max_distance + rover_cols) || object_cols < (rover_cols - max_distance)) && object_rows < 500))
+	  {
+	    Cluster.push_back(cv::Point2f(object_cols,object_rows));
+	  }
 	}
 	void sendImage()
 	{
@@ -161,7 +198,7 @@ private:
 		sensor_msgs::ImagePtr image_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
 		
 		//Show Image
-		//cv::imshow(OPENCV_WINDOW, image_ptr);
+		cv::imshow(OPENCV_WINDOW, image);
 		
 		cvWaitKey(1);
 
