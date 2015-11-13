@@ -104,6 +104,8 @@ void loop()
     
     nh.spinOnce();
   }
+  
+  count++;
 
   for(int deg = 90; deg > -90; deg--)
   {
@@ -126,6 +128,8 @@ void loop()
     
     nh.spinOnce();
   }
+  
+  count++;
 
   nh.spinOnce();
 }
