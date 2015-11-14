@@ -2,7 +2,7 @@
 /*
  * References:
  * 
- * 
+ * 	How to run arduino: rosrun rosserial_python serial_node.py /dev/ttyUSB0
  *
 */
 
@@ -131,35 +131,45 @@ public:
 			if(count != data[0])
 			{
 				count = data[0];
-				evaluateCluster();
-				
-				sendImage();
 				
 				//Reinitialize image to zeros
 				image.setTo(cv::Scalar(255, 255, 255));
 				
+				evaluateCluster();
+				
+				sendImage();
+			
 				//Reset Points and Cluster
 				Cluster.clear();
 			}
 			
 			//Draw points on image
 			//From 0-180 degrees
-			
+			cv::Point2f tempPoint;
 			calculatePoint(data[1], data[2]);
+			
+			tempPoint.x = object_cols;
+			tempPoint.y = object_rows;
+			cv::circle(image, tempPoint, 3, cv::Scalar(0,255,255), CV_FILLED, 8, 0);
 			
 			//From 180-360 degrees
 			calculatePoint(data[1] + 180, data[3]);
 			
-		}
+			tempPoint.x = object_cols;
+			tempPoint.y = object_rows;
+			cv::circle(image, tempPoint, 3, cv::Scalar(0,255,255), CV_FILLED, 8, 0);
 			
-
-//ROS_INFO("dis = %d	cos = %d	sin = %d", int(data[3]), int(data[3] * cos(90 * (M_PI / 180))), int(data[3] * sin(90  * (M_PI / 180))));
+			//Show Image
+		cv::imshow(OPENCV_WINDOW, image);
+		
+		cvWaitKey(1);
+		}
 	}
 
 private:	
 	void evaluateCluster()
 	{
-	  int K = 2, attempts = 3, flags = cv::KMEANS_PP_CENTERS;
+	  int K = 2, attempts = 30, flags = cv::KMEANS_PP_CENTERS;
 	  cv::Mat labels, centers;
 	  cv::Point2f tempPoint;
 	  cv::Mat points(Cluster.size(), 2, CV_32F);
@@ -173,12 +183,12 @@ private:
 	  
 	  cv::kmeans(points,K,labels,cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0),attempts,flags, centers);
 	  
-	  for(int i = 0; i < 4; i++)
+	 
+	  for(int i = 0; i < centers.rows; i++)
 	  {
-	   int idx = labels.at<int>(i);
-	   tempPoint.x = centers.at<float>(idx, 0);
-	   tempPoint.y = centers.at<float>(idx, 1);
-	   //ROS_INFO("%d", );
+	   tempPoint.x = abs(centers.at<float>(i, 0));
+	   tempPoint.y = abs(centers.at<float>(i, 1));
+	      
 	   cv::circle(image, tempPoint, 3, cv::Scalar(0,0,255), CV_FILLED, 8, 0);
 	  }
 	}
@@ -187,20 +197,15 @@ private:
 	  object_cols = 400 + (dis * cos(deg * (M_PI / 180)));
 	  object_rows = 400 - (dis * sin(deg * (M_PI / 180)));
 	  
-	  if(!((object_cols > (max_distance + rover_cols) || object_cols < (rover_cols - max_distance)) && object_rows < 500))
-	  {
-	    Cluster.push_back(cv::Point2f(object_cols,object_rows));
+	  if((object_cols >= 0 && object_cols <= 800) && (object_rows >= 0 && object_rows <= 800))
+	  { 
+	   Cluster.push_back(cv::Point2f(object_cols,object_rows)); 
 	  }
 	}
 	void sendImage()
 	{
 		//Convert to message	
 		sensor_msgs::ImagePtr image_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
-		
-		//Show Image
-		cv::imshow(OPENCV_WINDOW, image);
-		
-		cvWaitKey(1);
 
 		//Publish Image
 		pub.publish(image_ptr);
