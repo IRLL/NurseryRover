@@ -6,8 +6,8 @@
 
 /*
  * Message references:
- *	msg[0] = left distance
- *	msg[1] = right distance
+ *	1 = left distance
+ *	2 = right distance
 */
 
 #include <ros/ros.h>
@@ -16,12 +16,15 @@
 #include "std_msgs/MultiArrayDimension.h"
 #include "std_msgs/Int32MultiArray.h"
 
+#include "std_msgs/String.h"
+#include <sstream>
+
 class CommandConverter
 {
 private:
 	ros::NodeHandle _nh;
 
-        std_msgs::Int32MultiArray _command;
+        std_msgs::String _command;
 
         //Initialize Publisher and Subscriber
         ros::Publisher pub;
@@ -36,13 +39,13 @@ private:
 public:
 	CommandConverter()
 	{
-		pub = _nh.advertise<std_msgs::Int32MultiArray>("/command_converter/commands", 2);
-		sub = _nh.subscribe("/image_analysis/distances", 2, &CommandConverter::commandConverterCallback, this);
+		pub = _nh.advertise<std_msgs::String>("/command_converter/commands", 100);
+		sub = _nh.subscribe("/lidar_data/distances", 4, &CommandConverter::commandConverterCallback, this);
 
 	}
 	void commandConverterCallback(const std_msgs::Int32MultiArray::ConstPtr& msg)
 	{
-		int temp_array[2];
+		int temp_array[4];
 		int i = 0;
 
 		//Set values
@@ -51,11 +54,19 @@ public:
                         temp_array[i] = *it;
                         i++;
                 }
-
+              
 		//Set left and right distances
-		_left_distance =  temp_array[0];
-		_right_distance = temp_array[1];	
-	
+		if(temp_array[0] < temp_array[3])
+		{
+		  _left_distance =  temp_array[0];
+		  _right_distance = temp_array[3];	
+		}
+		else 
+		{
+		  _left_distance =  temp_array[3];
+		  _right_distance = temp_array[0];
+		}
+		
 		setMotorSpeed(_left_distance, _right_distance);
 
 		assignMotorSpeedData();
@@ -66,7 +77,13 @@ public:
 	}
 	void setMotorSpeed(int left_d, int right_d)
 	{
-		if(left_d == right_d)
+		if(left_d == 0 && right_d == 0)
+		{
+		  //Stop
+		  _left_motor_speed = 0;
+		  _right_motor_speed = 0;
+		}
+		else if(left_d == right_d)
 		{
 			//Go straight
 			_left_motor_speed = 50;
@@ -87,14 +104,15 @@ public:
 	}
 	void assignMotorSpeedData()
 	{
-		_command.data.push_back(_left_motor_speed);
-		_command.data.push_back(_right_motor_speed);
+		std::stringstream message;
+		message << _left_motor_speed << "," << _right_motor_speed;
+		_command.data = message.str();
 	}
 };
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "lidar_data_node");
+	ros::init(argc, argv, "command_node");
 
 	CommandConverter c;
 	ros::spin();
