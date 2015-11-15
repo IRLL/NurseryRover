@@ -1,4 +1,3 @@
-
 /*
  * References:
  * 
@@ -34,6 +33,8 @@
 #include <sstream>
 #include <string>
 
+ #include "std_msgs/Int32MultiArray.h"
+
 
 //Open window
 static const std::string OPENCV_WINDOW = "Image";
@@ -43,11 +44,8 @@ class LidarDataConverter
 private:
 	ros::NodeHandle nh;
 	
-        ros::Subscriber sub;
-
-	//Ros Image Trans
-	image_transport::ImageTransport _it;
-	image_transport::Publisher pub;	
+    ros::Subscriber sub;
+	ros::Publisher pub;	
 
 	double data[4];
 	
@@ -72,10 +70,11 @@ private:
 	bool program_start;
 	
 	cv::Mat image;
+	std_msgs::Int32MultiArray dataToSend;
 	
 public:
 
-	LidarDataConverter():_it(nh)
+	LidarDataConverter()
 	{
 		//Initialize front and back
 		front = 1;
@@ -84,7 +83,8 @@ public:
 		//Initialize size of image
 		rows = 800;
 		cols = 800;
-		
+
+			
 		//Initialize image
 		image = cv::Mat::zeros(cols, rows, CV_8UC3);
 		image.setTo(cv::Scalar(255, 255, 255));
@@ -98,7 +98,7 @@ public:
 		max_distance = 200;
 
 		program_start = true;
-		pub = _it.advertise("/lidar_data_node/output_image", 1);
+		pub = nh.advertise<std_msgs::Int32MultiArray>("/lidar_data_node/cluster", 4);
 		sub = nh.subscribe("/arduino/data", 100, &LidarDataConverter::converterCallback, this);
 		
 		cv::namedWindow(OPENCV_WINDOW);
@@ -136,8 +136,8 @@ public:
 				image.setTo(cv::Scalar(255, 255, 255));
 				
 				evaluateCluster();
-				
-				sendImage();
+
+				pub.publish(dataToSend);
 			
 				//Reset Points and Cluster
 				Cluster.clear();
@@ -182,15 +182,20 @@ private:
 	  }
 	  
 	  cv::kmeans(points,K,labels,cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0),attempts,flags, centers);
-	  
-	 
+	  //Clear Array
+	  dataToSend.data.clear();
 	  for(int i = 0; i < centers.rows; i++)
+
 	  {
 	   tempPoint.x = abs(centers.at<float>(i, 0));
 	   tempPoint.y = abs(centers.at<float>(i, 1));
-	      
+	   
+	   // add data to array
+	   dataToSend.data.push_back(tempPoint.x);
+	   dataToSend.data.push_back(tempPoint.y); 
 	   cv::circle(image, tempPoint, 3, cv::Scalar(0,0,255), CV_FILLED, 8, 0);
 	  }
+	   
 	}
 	void calculatePoint(int deg, int dis)
 	{
@@ -201,14 +206,6 @@ private:
 	  { 
 	   Cluster.push_back(cv::Point2f(object_cols,object_rows)); 
 	  }
-	}
-	void sendImage()
-	{
-		//Convert to message	
-		sensor_msgs::ImagePtr image_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
-
-		//Publish Image
-		pub.publish(image_ptr);
 	}
 };
 
@@ -221,4 +218,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-
