@@ -9,7 +9,7 @@
  *	1 = left distance
  *	2 = right distance
 */
-
+/*
 #include <ros/ros.h>
 
 #include "std_msgs/MultiArrayLayout.h"
@@ -43,6 +43,8 @@ public:
 		sub = _nh.subscribe("/lidar_data/distances", 4, &CommandConverter::commandConverterCallback, this);
 
 	}
+	
+private:
 	void commandConverterCallback(const std_msgs::Int32MultiArray::ConstPtr& msg)
 	{
 		int temp_array[4];
@@ -116,6 +118,53 @@ int main(int argc, char** argv)
 
 	CommandConverter c;
 	ros::spin();
+	
+	
 
 	return 0;
-} 
+} */
+
+#include <ros/ros.h>
+
+#include "std_msgs/MultiArrayLayout.h"
+#include "std_msgs/MultiArrayDimension.h"
+#include "std_msgs/Int32MultiArray.h"
+
+#include "std_msgs/String.h"
+#include <sstream>
+
+	ros::NodeHandle _nh;
+
+        std_msgs::String _command;
+
+        //Initialize Publisher and Subscriber
+        ros::Publisher pub;
+        ros::Subscriber sub;
+
+	int _left_distance;
+	int _right_distance;
+
+	int _left_motor_speed;
+	int _right_motor_speed;
+
+
+void assignMotorSpeedData()
+	{
+		std::stringstream message;
+		message << 50 << "," << 50;
+		_command.data = message.str();
+	}
+
+int main(int argc, char** argv)
+{
+	pub = _nh.advertise<std_msgs::String>("/command_converter/commands", 100);
+	
+	assignMotorSpeedData();
+	
+	pub.publish(_command);
+	ros::spin();
+	
+	
+
+	return 0;
+}

@@ -1,19 +1,19 @@
 #include <ros.h>
 
 #include <std_msgs/String.h>
+#include <string.h>
 
+#include <SoftwareSerial.h>
 #include <SabertoothSimplified.h>
 
 #include <Herkulex.h>
 
 #include <SoftwareSerial.h>
 
-#include <ros.h>
-#include <std_msgs/String.h>
-
 ros::NodeHandle  nh;
 
-SabertoothSimplified ST;
+SoftwareSerial SWSerial(NOT_A_PIN, 14); // RX on no pin (unused), TX on pin 11 (to S1).
+SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
 
 //Variables
 int count = 0;
@@ -29,26 +29,33 @@ int m2Speed = 0;
 //Servo Id
 int servoID = 253;
 
-/*
-void roverCommandsCb( const std_msgs::String msg)
+
+void roverCommandsCb( const std_msgs::String& msg)
 {
-  //See this link to split string
-  http://answers.ros.org/question/81386/rosserial-arduino-unpack-requires-a-string-arguement-of-length-4/
+  String commands = msg.data;
+  char input[commands.length()];
+  char separator[] = ",";
+  char *token;
   
-  //This is where you parse msg
+  strcpy(input, commands.c_str());
+   
+  token = strtok(input, separator);
+  m1Speed = 0;
+  token = strtok(token, separator);
+  m2Speed = 0;
   
   //Write motor commands
   writeMotorCommands();
-}*/
+}
 
 std_msgs::String message;
 ros::Publisher pub("/arduino/data", &message);
-//ros::Subscriber<std_msgs::String> sub("/rover_commands", roverCommandsCb);
+ros::Subscriber<std_msgs::String> sub("/command_converter/commands", roverCommandsCb);
 
 void setup()
 {
   //Sabertooth communication
-  //SabertoothTXPinSerial.begin(9600); // This is the baud rate you chose with the DIP switches.
+  SWSerial.begin(9600); // This is the baud rate you chose with the DIP switches.
   
   //Ros Publish and Subscribing
   nh.initNode();
