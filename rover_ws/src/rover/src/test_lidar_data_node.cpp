@@ -138,7 +138,7 @@ public:
 				
 				evaluateCluster();
 				
-				sendImage();
+				//sendImage();
 
 				pub.publish(dataToSend);
 			
