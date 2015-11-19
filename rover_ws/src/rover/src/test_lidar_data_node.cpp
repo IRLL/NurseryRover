@@ -1,4 +1,3 @@
-
 /*
  * References:
  * 
@@ -137,8 +136,6 @@ public:
 				image.setTo(cv::Scalar(255, 255, 255));
 				
 				evaluateCluster();
-				
-				//sendImage();
 
 				pub.publish(dataToSend);
 			
@@ -210,15 +207,6 @@ private:
 	   Cluster.push_back(cv::Point2f(object_cols,object_rows)); 
 	  }
 	}
-	void sendImage()
-	{
-		//Convert to message	
-		sensor_msgs::ImagePtr image_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
-
-		//Publish Image
-		pub.publish(image_ptr);
-	}
-
 };
 
 int main(int argc, char** argv)
@@ -230,4 +218,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-
