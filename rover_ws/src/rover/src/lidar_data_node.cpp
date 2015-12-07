@@ -135,7 +135,7 @@ public:
 			if(count != data[0])
 			{
 				count = data[0];
-				finalPointProcess();
+				
 				sendImage();
 				
 				//Reinitialize image to zeros
@@ -338,27 +338,6 @@ private:
 
 		//Publish Image
 		pub.publish(image_ptr);
-	}
-	void finalPointProcess()
-	{
-		cv::Point2f frontPoint = frontPoints[0];
-		cv::Point2f rearPoint = rearPoints[rearPoints.size()-1];
-		double newpointDistance = calculateDistance(frontPoint,rearPoint);
-		if(newpointDistance<maxPointDifference)
-		{
-			cv::line(image,frontPoint,rearPoint,cv::Scalar(0,0,255),3,8,0);
-
-		}
-		 frontPoint= frontPoints[frontPoints.size()-1];
-		 rearPoint = rearPoints[0];
-		newpointDistance = calculateDistance(frontPoint,rearPoint);
-		if(newpointDistance<maxPointDifference)
-		{
-			cv::line(image,frontPoint,rearPoint,cv::Scalar(0,0,255),3,8,0);
-
-		}
-
-
 	}
 };
 

@@ -16,15 +16,16 @@
 #include "std_msgs/MultiArrayDimension.h"
 #include "std_msgs/Int32MultiArray.h"
 
-#include "std_msgs/String.h"
-#include <sstream>
+#include "geometry_msgs/Point.h"
+
+#include <ros/console.h>
 
 class CommandConverter
 {
 private:
 	ros::NodeHandle _nh;
 
-        std_msgs::String _command;
+        geometry_msgs::Point command;
 
         //Initialize Publisher and Subscriber
         ros::Publisher pub;
@@ -39,8 +40,8 @@ private:
 public:
 	CommandConverter()
 	{
-		pub = _nh.advertise<std_msgs::String>("/command_converter/commands", 100);
-		sub = _nh.subscribe("/lidar_data/distances", 4, &CommandConverter::commandConverterCallback, this);
+		pub = _nh.advertise<geometry_msgs::Point>("/command_converter/commands", 1);
+		sub = _nh.subscribe("/lidar_data/cluster", 4, &CommandConverter::commandConverterCallback, this);
 
 	}
 	
@@ -58,24 +59,24 @@ private:
                 }
               
 		//Set left and right distances
-		if(temp_array[0] < temp_array[3])
+		if(temp_array[0] < temp_array[2])
 		{
-		  _left_distance =  temp_array[0];
-		  _right_distance = temp_array[3];	
+		  _left_distance = abs(temp_array[0] - 400);
+		  _right_distance = abs(temp_array[2] - 400);	
 		}
 		else 
 		{
-		  _left_distance =  temp_array[3];
-		  _right_distance = temp_array[0];
+		  _left_distance = abs(temp_array[2] - 400);
+		  _right_distance = abs(temp_array[0] - 400);
 		}
 		
 		setMotorSpeed(_left_distance, _right_distance);
 
 		assignMotorSpeedData();
+		
+		pub.publish(command);
 
-		pub.publish(_command);
-
-
+		//ROS_INFO(command.x);
 	}
 	void setMotorSpeed(int left_d, int right_d)
 	{
@@ -106,9 +107,8 @@ private:
 	}
 	void assignMotorSpeedData()
 	{
-		std::stringstream message;
-		message << _left_motor_speed << "," << _right_motor_speed;
-		_command.data = message.str();
+		command.x = _left_motor_speed;
+		command.y = _right_motor_speed;
 	}
 };
 
@@ -119,7 +119,5 @@ int main(int argc, char** argv)
 	CommandConverter c;
 	ros::spin();
 	
-	
-
 	return 0;
 } 

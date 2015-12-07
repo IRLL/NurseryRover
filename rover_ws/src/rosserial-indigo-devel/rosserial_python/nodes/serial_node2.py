@@ -43,11 +43,12 @@ import sys
    
 if __name__=="__main__":
 
-    rospy.init_node("serial_node", anonymous = True)
-    rospy.loginfo("ROS Serial Python Node {}".format(rospy.get_caller_id()))
+    rospy.init_node("serial_node2", anonymous = True)
+    rospy.loginfo("ROS Serial Python Node")
 
     port_name = rospy.get_param('~port','/dev/ttyUSB0')
     baud = int(rospy.get_param('~baud','57600'))
+
     # TODO: should these really be global?
     tcp_portnum = int(rospy.get_param('/rosserial_embeddedlinux/tcp_port', '11411'))
     fork_server = rospy.get_param('/rosserial_embeddedlinux/fork_server', False)

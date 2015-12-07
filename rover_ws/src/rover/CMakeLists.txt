@@ -113,6 +113,7 @@ add_executable(lidar_data_node src/lidar_data_node.cpp)
 add_executable(image_analysis_node src/image_analysis_node.cpp)
 add_executable(command_node src/command_node.cpp)
 add_executable(test_lidar_data_node src/test_lidar_data_node.cpp)
+add_executable(test_node src/test_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -132,6 +133,11 @@ target_link_libraries(command_node
 )
 
 target_link_libraries(test_lidar_data_node
+   ${catkin_LIBRARIES}
+   ${OpenCV_LIBRARIES}
+)
+
+target_link_libraries(test_node
    ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}
 )

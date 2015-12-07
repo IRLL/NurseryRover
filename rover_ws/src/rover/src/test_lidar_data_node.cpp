@@ -95,10 +95,10 @@ public:
 
 		//Initialize max max_distance
 		maxPointDifference = 20;
-		max_distance = 200;
+		max_distance = 100;
 
 		program_start = true;
-		pub = nh.advertise<std_msgs::Int32MultiArray>("/lidar_data_node/cluster", 4);
+		pub = nh.advertise<std_msgs::Int32MultiArray>("/lidar_data/cluster", 4);
 		sub = nh.subscribe("/arduino/data", 100, &LidarDataConverter::converterCallback, this);
 		
 		cv::namedWindow(OPENCV_WINDOW);
@@ -145,19 +145,10 @@ public:
 			
 			//Draw points on image
 			//From 0-180 degrees
-			cv::Point2f tempPoint;
 			calculatePoint(data[1], data[2]);
-			
-			tempPoint.x = object_cols;
-			tempPoint.y = object_rows;
-			cv::circle(image, tempPoint, 3, cv::Scalar(0,255,255), CV_FILLED, 8, 0);
 			
 			//From 180-360 degrees
 			calculatePoint(data[1] + 180, data[3]);
-			
-			tempPoint.x = object_cols;
-			tempPoint.y = object_rows;
-			cv::circle(image, tempPoint, 3, cv::Scalar(0,255,255), CV_FILLED, 8, 0);
 			
 			//Show Image
 		cv::imshow(OPENCV_WINDOW, image);
@@ -179,6 +170,8 @@ private:
 	    tempPoint = Cluster[i];
 	    points.at<float>(i, 0) = tempPoint.x;
 	    points.at<float>(i, 1) = tempPoint.y;
+	    
+	    cv::circle(image, tempPoint, 3, cv::Scalar(0,255,255), CV_FILLED, 8, 0);
 	  }
 	  
 	  cv::kmeans(points,K,labels,cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0),attempts,flags, centers);
@@ -204,7 +197,11 @@ private:
 	  
 	  if((object_cols >= 0 && object_cols <= 800) && (object_rows >= 0 && object_rows <= 800))
 	  { 
-	   Cluster.push_back(cv::Point2f(object_cols,object_rows)); 
+	    if(max_distance >= abs(object_cols - 400) && object_rows <= 500)
+	    {
+	      object_cols = 400 + (dis * cos(deg * (M_PI / 180)) * 4);
+	      Cluster.push_back(cv::Point2f(object_cols,object_rows)); 
+	    }
 	  }
 	}
 };
