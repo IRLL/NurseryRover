@@ -36,13 +36,16 @@ private:
 
 	int _left_motor_speed;
 	int _right_motor_speed;
+	
+	int turn_significance;
 
 public:
 	CommandConverter()
 	{
+		turn_significance = 0;
+		
 		pub = _nh.advertise<geometry_msgs::Point>("/command_converter/commands", 1);
 		sub = _nh.subscribe("/lidar_data/cluster", 4, &CommandConverter::commandConverterCallback, this);
-
 	}
 	
 private:
@@ -75,40 +78,69 @@ private:
 		assignMotorSpeedData();
 		
 		pub.publish(command);
-
-		//ROS_INFO(command.x);
+				
+		ROS_INFO("Left: %d	Right: %d", _left_distance, _right_distance);
 	}
 	void setMotorSpeed(int left_d, int right_d)
 	{
+		
 		if(left_d == 0 && right_d == 0)
 		{
 		  //Stop
 		  _left_motor_speed = 0;
 		  _right_motor_speed = 0;
 		}
-		else if(left_d == right_d)
+		else if(40 > abs(left_d - right_d))
 		{
-			//Go straight
-			_left_motor_speed = 50;
-			_right_motor_speed = 50;
+			if(turn_significance > 0)
+			{
+			  _left_motor_speed = 60 + abs(8 * turn_significance);
+			  _right_motor_speed = 57;
+			  
+			  turn_significance = 0;
+			  ROS_INFO("Go Sharp Right	Left: %d	TS: %d", _left_motor_speed, turn_significance);
+			}
+			else if(turn_significance < 0)
+			{
+			  _left_motor_speed = 57;
+			  _right_motor_speed = 60 + abs(8 * turn_significance);
+			  
+			  turn_significance = 0;
+			  ROS_INFO("Go Sharp Left	Right: %d	TS: %d", _right_motor_speed, turn_significance);
+			}
+			else
+			{
+			  //Go straight
+			  _left_motor_speed = 50;
+			  _right_motor_speed = 53;
+			  
+			  ROS_INFO("Go Straight	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
+			}
 		}
 		else if(left_d < right_d)
 		{
-			//Go left
-			_left_motor_speed = 50;
-			_right_motor_speed = 45;
+		  
+			//Go right
+			_left_motor_speed = 60;
+			_right_motor_speed = 57;
+			ROS_INFO("Turn Right	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
+			
+		  turn_significance--;
 		}
 		else if(left_d > right_d)
 		{
-			//Go right
-			_left_motor_speed = 45;
-			_right_motor_speed = 50;
+			//Go left
+			_left_motor_speed = 55;
+			_right_motor_speed = 70;
+			ROS_INFO("Turn Left	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
+			
+		  turn_significance++;
 		}
 	}
 	void assignMotorSpeedData()
 	{
-		command.x = _left_motor_speed;
-		command.y = _right_motor_speed;
+		command.x = _right_motor_speed;
+		command.y = _left_motor_speed;
 	}
 };
 

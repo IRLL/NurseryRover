@@ -95,7 +95,7 @@ public:
 
 		//Initialize max max_distance
 		maxPointDifference = 20;
-		max_distance = 100;
+		max_distance = 1000;//100;
 
 		program_start = true;
 		pub = nh.advertise<std_msgs::Int32MultiArray>("/lidar_data/cluster", 4);
@@ -135,8 +135,10 @@ public:
 				//Reinitialize image to zeros
 				image.setTo(cv::Scalar(255, 255, 255));
 				
-				evaluateCluster();
-
+				if(Cluster.size() >= 2)
+				{
+				  evaluateCluster();
+				}
 				pub.publish(dataToSend);
 			
 				//Reset Points and Cluster
@@ -171,7 +173,7 @@ private:
 	    points.at<float>(i, 0) = tempPoint.x;
 	    points.at<float>(i, 1) = tempPoint.y;
 	    
-	    cv::circle(image, tempPoint, 3, cv::Scalar(0,255,255), CV_FILLED, 8, 0);
+	    cv::circle(image, tempPoint, 3, cv::Scalar(255,0,255), CV_FILLED, 8, 0);
 	  }
 	  
 	  cv::kmeans(points,K,labels,cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0),attempts,flags, centers);
@@ -199,7 +201,6 @@ private:
 	  { 
 	    if(max_distance >= abs(object_cols - 400) && object_rows <= 500)
 	    {
-	      object_cols = 400 + (dis * cos(deg * (M_PI / 180)) * 4);
 	      Cluster.push_back(cv::Point2f(object_cols,object_rows)); 
 	    }
 	  }
