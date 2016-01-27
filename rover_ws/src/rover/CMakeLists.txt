@@ -111,7 +111,7 @@ include_directories(
 ## Declare a cpp executable
 add_executable(lidar_data_node src/lidar_data_node.cpp)
 add_executable(command_node src/command_node.cpp)
-
+add_executable(data_processing_node src/data_processing_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -124,6 +124,10 @@ target_link_libraries(lidar_data_node
 )
 target_link_libraries(command_node
    ${catkin_LIBRARIES}
+)
+target_link_libraries(data_processing_node
+   ${catkin_LIBRARIES}
+   ${OpenCV_LIBRARIES}
 )
 
 
