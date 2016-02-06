@@ -33,8 +33,7 @@
 #include <sstream>
 #include <string>
 
- #include "std_msgs/Int32MultiArray.h"
-
+#include "geometry_msgs/PoseArray.h"
 
 //Open window
 static const std::string OPENCV_WINDOW = "Image";
@@ -96,7 +95,7 @@ public:
     max_distance = 1000;//100;
     
     program_start = true;
-    pub = nh.advertise<std_msgs::Int32MultiArray>("/lidar_data/cluster", 4);
+    pub = nh.advertise<geometry_msgs::PoseArray>("/lidar_data/points_data", 360);
     sub = nh.subscribe("/arduino/data", 100, &LidarDataConverter::converterCallback, this);
     
     cv::namedWindow(OPENCV_WINDOW);
