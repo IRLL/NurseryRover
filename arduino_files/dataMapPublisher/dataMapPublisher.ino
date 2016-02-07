@@ -4,8 +4,7 @@
 #include <geometry_msgs/Point.h>
 #include <SabertoothSimplified.h>
 
-#include <std_msgs/String.h>
-#include <string.h>
+#include <std_msgs/Float32MultiArray.h>
 
 #include <Herkulex.h>
 
@@ -21,12 +20,11 @@ int degree = 0;
 int temp_degree = 0;
 unsigned int pulse_widthL = 0;
 unsigned int pulse_widthR = 0;
-char temp_message[100];
 
 //Servo Id
 int servoID = 253;
 
-std_msgs::String message;
+std_msgs::Float32MultiArray message;
 ros::Publisher pub("/arduino/data", &message);
 
 void messageCb(const geometry_msgs::Point& msg)
@@ -43,6 +41,7 @@ void setup()
   
   //Ros Publish and Subscribing
   nh.initNode();
+  message.data_length = 4;
   nh.advertise(pub);
   nh.subscribe(sub_1);
   
@@ -111,25 +110,10 @@ void loop()
 //Functions
 void assignData()
 {
-  char temp[10];
-  
-  //Convert to string
-  sprintf(temp, "%d", count);
-  strcpy(temp_message, temp);
-  strcat(temp_message, ",");
-  
-  sprintf(temp, "%d", degree);
-  strcat(temp_message, temp);
-  strcat(temp_message, ",");
-  
-  sprintf(temp, "%d", int(pulse_widthL));
-  strcat(temp_message, temp);
-  strcat(temp_message, ",");
-  
-  sprintf(temp, "%d", int(pulse_widthR));
-  strcat(temp_message, temp);
-  
-  message.data = temp_message;
+  message.data[0] = degree;
+  message.data[1] = int(pulse_widthL);
+  message.data[2] = int(pulse_widthR);
+  message.data[3] = count;
 }
 void getLidarData()
 {

@@ -83,8 +83,8 @@ public:
     //TODO: Correct this advertise - KAYL
     pub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 2);
     sub = nh.subscribe("/lidar_data/points_data", 360, &DataProcessing::ProcessingCallback, this);
-    //sub = nh.subscribe("/arduino/compass_value", &DataProcessing::CompassCallback, this);
-    //sub = nh.subscribe("/arduino/compass_start_point", &DataProcessing::CompassStartPointCallback, this);
+    sub = nh.subscribe("/arduino/compass_value", 1, &DataProcessing::CompassCallback, this);
+    sub = nh.subscribe("/arduino/compass_start_point", 1, &DataProcessing::CompassStartPointCallback, this);
     
     cv::namedWindow(OPENCV_WINDOW);
     
@@ -110,42 +110,63 @@ public:
     
     cvWaitKey(1);
   }
-  /*
   void CompassCallback(const std_msgs::Float32 msg)
   {
     compassValue = msg.data;
-  }*/
-  /*
+  }
   void CompassStartPointCallback(const std_msgs::Float32 msg)
   {
     compassStartPoint = msg.data;
-  }*/
+  }
 
 private:
   void setClusters(const geometry_msgs::PoseArray msg)
   {
-    geometry_msgs::Pose tempPose;
+    geometry_msgs::Pose pose;
     
     //Check if compassStartPoint has been initialized
     if(compassStartPoint == -1)
       return;
     
-    
+    double tempXFront, tempXBack, poseDegree;
     
     for(int i =  0; i < msg.poses.size(); i++)
     {
-      tempPose = msg.poses.at(i);
-      //TODO: Make condition for boundaries - KAYL
-      if(1)
+      pose = msg.poses.at(i);
+      poseDegree = atan(pose.position.y/pose.position.x);
+      
+      //Set temporary variables
+      if(compassStartPoint >= 180)
       {
-	//TODO: Make condition to decide which cluster to put data in - SHIVAM
-	if(1) 
+	tempXFront = pose.position.y/tan(compassStartPoint) + cols/2;
+	tempXBack = pose.position.y/tan(compassStartPoint - 180) + cols/2;
+      }
+      else
+      {
+	tempXFront = pose.position.y/tan(compassStartPoint) + cols/2;
+	tempXBack = pose.position.y/tan(compassStartPoint) + cols/2;
+      }
+      
+      if(max_distance >= abs(tempXFront - pose.position.x))
+      {
+	if(tempXFront < pose.position.x) 
 	{
-	  RightCluster.push_back(cv::Point2f(tempPose.position.x,tempPose.position.y));
+	  RightCluster.push_back(cv::Point2f(pose.position.x,pose.position.y));
 	}
-	else if(1)
+	else
 	{
-	  LeftCluster.push_back(cv::Point2f(tempPose.position.x,tempPose.position.y));
+	  LeftCluster.push_back(cv::Point2f(pose.position.x,pose.position.y));
+	}
+      }
+      else if(max_distance >= abs(tempXBack - pose.position.x))
+      {
+	if(tempXBack < pose.position.y) 
+	{
+	  RightCluster.push_back(cv::Point2f(pose.position.x,pose.position.y));
+	}
+	else
+	{
+	  LeftCluster.push_back(cv::Point2f(pose.position.x,pose.position.y));
 	}
       }
     }
