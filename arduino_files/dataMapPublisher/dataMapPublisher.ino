@@ -5,6 +5,7 @@
 #include <SabertoothSimplified.h>
 
 #include <std_msgs/Float32MultiArray.h>
+#include <std_msgs/Int32MultiArray.h>
 
 #include <Herkulex.h>
 
@@ -27,14 +28,14 @@ int servoID = 253;
 std_msgs::Float32MultiArray message;
 ros::Publisher pub("/arduino/data", &message);
 
-void messageCb(const geometry_msgs::Point& msg)
+void messageCb(const std_msgs::Int32MultiArray& msg)
 {
   //Write to motor
-  ST.motor(1, msg.x);
-  ST.motor(2, msg.y);
+  ST.motor(1, msg.data[0]);
+  ST.motor(2, msg.data[1]);
 }
 
-ros::Subscriber<geometry_msgs::Point> sub_1("/command_converter/commands",messageCb);
+ros::Subscriber<std_msgs::Int32MultiArray> sub_1("/command_converter/commands",messageCb);
 
 void setup()
 {
