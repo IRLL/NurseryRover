@@ -7,10 +7,10 @@
 
 /*
  * Variable references:
- *	msg[0] is count
- *	msg[1] is theta
- *	msg[2] is degree from 0-180
- *	msg[3] is degree from 180-360
+ *	msg[0] is theta
+ *	msg[1] is degree from 0-180
+ *	msg[2] is degree from 180-360
+ *	msg[3] is count
  *
 */
 
@@ -25,13 +25,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
 
-#include <std_msgs/String.h>
-
-#include <math.h>
-
-//String splitter
-#include <sstream>
-#include <string>
+#include <std_msgs/Float32MultiArray.h>
 
 #include "geometry_msgs/PoseArray.h"
 
@@ -51,33 +45,22 @@ private:
   //Clusters
   std::vector<cv::Point2f> Cluster;
   
-  //values
-  int front;
-  int rear;
-  
-  int maxPointDifference;
   int max_distance;
   int rows;
   int cols;
 
   int object_rows;
   int object_cols;
-  int rover_rows;
-  int rover_cols;
 
   double count;
   bool program_start;
   
   cv::Mat image;
-  std_msgs::Int32MultiArray dataToSend;
+  geometry_msgs::PoseArray points;
 	
 public:
   LidarDataConverter()
-  {
-    //Initialize front and back
-    front = 1;
-    rear = 2;
-    
+  {    
     //Initialize size of image
     rows = 800;
     cols = 800;
@@ -86,38 +69,25 @@ public:
     image = cv::Mat::zeros(cols, rows, CV_8UC3);
     image.setTo(cv::Scalar(255, 255, 255));
     
-    //Initialize location of rover
-    rover_rows = rows/2;
-    rover_cols = cols/2;
-    
-    //Initialize max max_distance
-    maxPointDifference = 20;
-    max_distance = 1000;//100;
+    //Initialize max_distance
+    max_distance = 1000;
     
     program_start = true;
     pub = nh.advertise<geometry_msgs::PoseArray>("/lidar_data/points_data", 360);
-    sub = nh.subscribe("/arduino/data", 100, &LidarDataConverter::converterCallback, this);
+    sub = nh.subscribe("/arduino/data", 4, &LidarDataConverter::converterCallback, this);
     
     cv::namedWindow(OPENCV_WINDOW);
     
   }
-  
-  void converterCallback(const std_msgs::String::ConstPtr& msg)
+  void converterCallback(const std_msgs::Float32MultiArray::ConstPtr& msg)
   {
-    //Convert data from string to double
-    //String splitter
-    std::stringstream ss(msg->data.c_str());
-    std::string token;
-	  
-    for(int temp_count = 0; std::getline(ss, token, ','); temp_count++)
-    {
-      data[temp_count] = std::atof(token.c_str());
-    }
-
+    for(int i = 0; i < 4; i++)
+      data[i] = msg->data[i];
+    
     //Representing start of program and initializing count 
     if(program_start == true)
     {
-      count = data[0];
+      count = (int)data[3];
 	
       //Setting start as untrue
       program_start = false;
@@ -125,30 +95,25 @@ public:
     else
     {
       //If we are starting a new set of points
-      if(count != data[0])
+      if(count != (int)data[3])
       {
-	count = data[0];
+	count = (int)data[3];
 	
 	//Reinitialize image to zeros
 	image.setTo(cv::Scalar(255, 255, 255));
-
-	if(Cluster.size() >= 2)
-	{
-	  evaluateCluster();
-	}
 	
-	pub.publish(dataToSend);
+	pub.publish(points);
 	
-	//Reset Points and Cluster
-	Cluster.clear();
+	//Reset Points
+	points.poses.clear();
       }
       
       //Draw points on image
       //From 0-180 degrees
-      calculatePoint(data[1], data[2]);
+      calculatePoint(data[0], data[1]);
       
       //From 180-360 degrees
-      calculatePoint(data[1] + 180, data[3]);
+      calculatePoint(data[0] + 180, data[2]);
       
       //Show Image
       cv::imshow(OPENCV_WINDOW, image);
@@ -160,39 +125,6 @@ public:
   }
 
 private:
-  void evaluateCluster()
-  {
-    int K = 2, attempts = 30, flags = cv::KMEANS_PP_CENTERS;
-    cv::Mat labels, centers;
-    cv::Point2f tempPoint;
-    cv::Mat points(Cluster.size(), 2, CV_32F);
-    
-    for(int i = 0; i < Cluster.size(); i++)
-    {
-      tempPoint = Cluster[i];
-      points.at<float>(i, 0) = tempPoint.x;
-      points.at<float>(i, 1) = tempPoint.y;
-      
-      cv::circle(image, tempPoint, 3, cv::Scalar(255,0,255), CV_FILLED, 8, 0);
-    }
-    
-    cv::kmeans(points,K,labels,cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0),attempts,flags, centers);
-    
-    //Clear Array	
-    dataToSend.data.clear();
-    
-    for(int i = 0; i < centers.rows; i++)
-    {
-      tempPoint.x = abs(centers.at<float>(i, 0));
-      tempPoint.y = abs(centers.at<float>(i, 1));
-      
-      // add data to array
-      dataToSend.data.push_back(tempPoint.x);
-      dataToSend.data.push_back(tempPoint.y); 
-      cv::circle(image, tempPoint, 3, cv::Scalar(0,0,255), CV_FILLED, 8, 0); 
-    } 
-  }
-  
   void calculatePoint(int deg, int dis)
   {
     object_cols = 400 + (dis * cos(deg * (M_PI / 180)));
@@ -200,10 +132,12 @@ private:
     
     if((object_cols >= 0 && object_cols <= 800) && (object_rows >= 0 && object_rows <= 800))
     { 
-      if(max_distance >= abs(object_cols - 400) && object_rows <= 500)
-      {
-	Cluster.push_back(cv::Point2f(object_cols,object_rows)); 
-      }
+      geometry_msgs::Pose pose;
+      pose.position.x = object_cols;
+      pose.position.y = object_rows;
+      points.poses.push_back(pose);
+      
+      cv::circle(image, cv::Point2f(object_cols,object_rows), 3, cv::Scalar(255,0,255), CV_FILLED, 8, 0);
     }
   }
   

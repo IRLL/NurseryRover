@@ -20,8 +20,6 @@
 #include "std_msgs/MultiArrayDimension.h"
 #include "std_msgs/Int32MultiArray.h"
 
-#include "geometry_msgs/Point.h"
-
 #include <ros/console.h>
 
 class CommandConverter
@@ -29,7 +27,7 @@ class CommandConverter
 private:
   ros::NodeHandle _nh;
   
-  geometry_msgs::Point command;
+  std_msgs::Int32MultiArray command;
   
   //Declare Publisher and Subscriber
   ros::Publisher pub;
@@ -47,7 +45,7 @@ public:
   {
     turn_significance = 0;
 
-    pub = _nh.advertise<geometry_msgs::Point>("/command_converter/commands", 1);
+    pub = _nh.advertise<std_msgs::Int32MultiArray>("/command_converter/commands", 2);
     sub = _nh.subscribe("/lidar_data/cluster", 4, &CommandConverter::commandConverterCallback, this);
   }
 	
@@ -153,8 +151,8 @@ private:
   
   void assignMotorSpeedData()
   {
-    command.x = _right_motor_speed;
-    command.y = _left_motor_speed;
+    command.data[0] = _right_motor_speed;
+    command.data[1] = _left_motor_speed;
   }
 };
 

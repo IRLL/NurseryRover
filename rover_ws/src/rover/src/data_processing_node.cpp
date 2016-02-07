@@ -80,8 +80,7 @@ public:
     maxPointDifference = 20;
     max_distance = 1000;//100;
     
-    //TODO: Correct this advertise - KAYL
-    pub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 2);
+    pub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 4);
     sub = nh.subscribe("/lidar_data/points_data", 360, &DataProcessing::ProcessingCallback, this);
     sub = nh.subscribe("/arduino/compass_value", 1, &DataProcessing::CompassCallback, this);
     sub = nh.subscribe("/arduino/compass_start_point", 1, &DataProcessing::CompassStartPointCallback, this);
@@ -178,8 +177,6 @@ private:
     
     evaluatePoints(leftPoints, LeftCluster);
     evaluatePoints(rightPoints, RightCluster);
-    
-    
   }
   void evaluatePoints(cv::Mat points,  std::vector<cv::Point2f>& cluster)
   {
