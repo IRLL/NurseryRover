@@ -1,18 +1,26 @@
 #include <ros.h>
 
 #include <SoftwareSerial.h>
-#include <geometry_msgs/Point.h>
 #include <SabertoothSimplified.h>
 
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/Int32MultiArray.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/String.h>
 
 #include <Herkulex.h>
+
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_HMC5883_U.h>
 
 ros::NodeHandle  nh;
 
 SoftwareSerial SWSerial(NOT_A_PIN, 14); // RX on no pin (unused), TX on pin 11 S1).
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
+
+/* Assign a unique ID to this sensor at the same time */
+Adafruit_HMC5883_Unified mag = Adafruit_HMC5883_Unified(12345);
 
 //Variables
 int count = 0;
@@ -25,8 +33,12 @@ unsigned int pulse_widthR = 0;
 //Servo Id
 int servoID = 253;
 
-std_msgs::Float32MultiArray message;
-ros::Publisher pub("/arduino/data", &message);
+std_msgs::Float32MultiArray lidarData;
+ros::Publisher pubData("/arduino/data", &lidarData);
+std_msgs::Float32 compassData;
+ros::Publisher pubCompass("/arduino/compass", &compassData);
+std_msgs::String errorMessage;
+ros::Publisher pubError("/arduino/error", &errorMessage);
 
 void messageCb(const std_msgs::Int32MultiArray& msg)
 {
@@ -35,16 +47,17 @@ void messageCb(const std_msgs::Int32MultiArray& msg)
   ST.motor(2, msg.data[1]);
 }
 
-ros::Subscriber<std_msgs::Int32MultiArray> sub_1("/command_converter/commands",messageCb);
+ros::Subscriber<std_msgs::Int32MultiArray> subMotorCommands("/command_converter/commands",messageCb);
 
 void setup()
 {
-  
   //Ros Publish and Subscribing
   nh.initNode();
-  message.data_length = 4;
-  nh.advertise(pub);
-  nh.subscribe(sub_1);
+  lidarData.data_length = 4;
+  nh.advertise(pubData);
+  nh.advertise(pubCompass);
+  nh.advertise(pubError);
+  nh.subscribe(subMotorCommands);
   
   //Sabertooth communication
   SWSerial.begin(9600); // This is the baud rate you chose with the DIP switches.
@@ -72,6 +85,12 @@ void setup()
   pinMode(7, OUTPUT); // Set pin 7 to control power enable line
   digitalWrite(7,HIGH); //Turn sensor on
   digitalWrite(6, LOW); // Set trigger LOW for continuous read
+  
+  /* Initialise the sensor */
+  if(!mag.begin())
+  {
+    //Publish error maybe?
+  }
 }
 
 void loop()
@@ -89,7 +108,7 @@ void loop()
   assignData();
   
   //Publish data
-  pub.publish(&message); 
+  pubData.publish(&lidarData); 
   
   if(temp_degree < 180 && count == temp_count)
     temp_degree++;
@@ -101,9 +120,13 @@ void loop()
   {
     count++;
     temp_count += 2;
+    getCompassData();
   }
   else if(temp_degree == 180)
+  {
     count++;
+    getCompassData();
+  }
   
   nh.spinOnce();  
 }
@@ -111,10 +134,10 @@ void loop()
 //Functions
 void assignData()
 {
-  message.data[0] = degree;
-  message.data[1] = int(pulse_widthL);
-  message.data[2] = int(pulse_widthR);
-  message.data[3] = count;
+  lidarData.data[0] = degree;
+  lidarData.data[1] = int(pulse_widthL);
+  lidarData.data[2] = int(pulse_widthR);
+  lidarData.data[3] = count;
 }
 void getLidarData()
 {
@@ -156,4 +179,34 @@ void getServoData()
 {
   degree = Herkulex.getAngle(servoID);
   degree = degree + 90;
+}
+void getCompassData()
+{
+  /* Get a new sensor event */ 
+  sensors_event_t event; 
+  mag.getEvent(&event);
+  
+  // Hold the module so that Z is pointing 'up' and you can measure the heading with x&y
+  // Calculate heading when the magnetometer is level, then correct for signs of axis.
+  float heading = atan2(event.magnetic.y, event.magnetic.x);
+  
+  // Once you have your heading, you must then add your 'Declination Angle', which is the 'Error' of the magnetic field in your location.
+  // Find yours here: http://www.magnetic-declination.com/
+  // Mine is: -13* 2' W, which is ~13 Degrees, or (which we need) 0.22 radians
+  // If you cannot find your Declination, comment out these two lines, your compass will be slightly off.
+  float declinationAngle = 0.22;
+  heading += declinationAngle;
+  
+  // Correct for when signs are reversed.
+  if(heading < 0)
+    heading += 2*PI;
+    
+  // Check for wrap due to addition of declination.
+  if(heading > 2*PI)
+    heading -= 2*PI;
+   
+  // Convert radians to degrees for readability.
+  compassData.data = heading * 180/M_PI; 
+  
+  pubCompass.publish(&compassData);
 }
