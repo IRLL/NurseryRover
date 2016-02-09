@@ -80,7 +80,8 @@ public:
     maxPointDifference = 20;
     max_distance = 1000;//100;
     
-    pub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 4);
+    //TODO: Correct this advertise - KAYL
+    pub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 2);
     sub = nh.subscribe("/lidar_data/points_data", 360, &DataProcessing::ProcessingCallback, this);
     sub = nh.subscribe("/arduino/compass_value", 1, &DataProcessing::CompassCallback, this);
     sub = nh.subscribe("/arduino/compass_start_point", 1, &DataProcessing::CompassStartPointCallback, this);
@@ -177,6 +178,8 @@ private:
     
     evaluatePoints(leftPoints, LeftCluster);
     evaluatePoints(rightPoints, RightCluster);
+    
+    
   }
   void evaluatePoints(cv::Mat points,  std::vector<cv::Point2f>& cluster)
   {
@@ -191,7 +194,11 @@ private:
       points.at<float>(i, 1) = tempPoint.y;
     }
     cv::kmeans(points,K,labels,cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0),attempts,flags, centers);
-    cv::line(image, cv::Point2f(abs(centers.at<float>(0, 0)), abs(centers.at<float>(0, 1))), cv::Point2f(abs(centers.at<float>(1, 0)), abs(centers.at<float>(1, 1))), cv::Scalar(0,0,255), 2, 8, 0);
+    cv::Point2f point1 = cv::Point2f(abs(centers.at<float>(0, 0)), abs(centers.at<float>(0, 1)));
+    cv::Point2f point2 = cv::Point2f(abs(centers.at<float>(1, 0)), abs(centers.at<float>(1, 1)));
+
+    //draw line between two points
+    cv::line(image, point1, point2, cv::Scalar(0,0,255), 2, 8, 0);
   }
 };
 
