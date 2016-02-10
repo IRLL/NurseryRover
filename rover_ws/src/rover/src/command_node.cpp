@@ -95,12 +95,12 @@ private:
       _left_motor_speed = 0;
       _right_motor_speed = 0;
     }
-    else if(40 > abs(left_d - right_d))
+    else if(60 > abs(left_d - right_d))
     {
       if(turn_significance > 0)
       {
 	_left_motor_speed = 60 + abs(8 * turn_significance);
-	_right_motor_speed = 57;
+	_right_motor_speed = 59;
 	
 	turn_significance = 0;
 	
@@ -109,7 +109,7 @@ private:
       }
       else if(turn_significance < 0)
       {
-	_left_motor_speed = 57;
+	_left_motor_speed = 45;
 	_right_motor_speed = 60 + abs(8 * turn_significance);
 	
 	turn_significance = 0;
@@ -121,7 +121,7 @@ private:
       {
 	//Go straight
 	_left_motor_speed = 50;
-	_right_motor_speed = 53;
+	_right_motor_speed = 56;
 	
 	// TESTING
 	ROS_INFO("Go Straight	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
@@ -141,7 +141,7 @@ private:
     else if(left_d > right_d)
     {
       //Go left
-      _left_motor_speed = 55;
+      _left_motor_speed = 60;
       _right_motor_speed = 70;
       
       // TESTING
@@ -153,8 +153,8 @@ private:
   
   void assignMotorSpeedData()
   {
-    command.x = _right_motor_speed;
-    command.y = _left_motor_speed;
+    command.x = _right_motor_speed * 1.5;
+    command.y = _left_motor_speed * 1.5;
   }
 };
 
