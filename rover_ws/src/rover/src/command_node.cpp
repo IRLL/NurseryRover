@@ -84,7 +84,7 @@ private:
     pub.publish(command);
     
     // TESTING
-    //ROS_INFO("Left: %d	Right: %d", _left_distance, _right_distance);
+    ROS_INFO("Left: %d	Right: %d", _left_distance, _right_distance);
   }
   
   void setMotorSpeed(int left_d, int right_d)
@@ -105,7 +105,7 @@ private:
 	turn_significance = 0;
 	
 	// TESTING
-	//ROS_INFO("Go Sharp Right	Left: %d	TS: %d", _left_motor_speed, turn_significance);
+	ROS_INFO("Go Sharp Right	Left: %d	TS: %d", _left_motor_speed, turn_significance);
       }
       else if(turn_significance < 0)
       {
@@ -115,7 +115,7 @@ private:
 	turn_significance = 0;
 	
 	// TESTING
-	//ROS_INFO("Go Sharp Left	Right: %d	TS: %d", _right_motor_speed, turn_significance);
+	ROS_INFO("Go Sharp Left	Right: %d	TS: %d", _right_motor_speed, turn_significance);
       }
       else
       {
@@ -124,7 +124,7 @@ private:
 	_right_motor_speed = 53;
 	
 	// TESTING
-	//ROS_INFO("Go Straight	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
+	ROS_INFO("Go Straight	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
       }
     }
     else if(left_d < right_d)
@@ -134,7 +134,7 @@ private:
       _right_motor_speed = 57;
       
       // TESTING
-      //ROS_INFO("Turn Right	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
+      ROS_INFO("Turn Right	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
       
       turn_significance--;
     }
@@ -145,7 +145,7 @@ private:
       _right_motor_speed = 70;
       
       // TESTING
-      //ROS_INFO("Turn Left	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
+      ROS_INFO("Turn Left	Left: %d	Right: %d", _left_motor_speed, _right_motor_speed);
 
       turn_significance++;
     }
