@@ -143,7 +143,7 @@ private:
       }
       else
       {
-	tempXFront = pose.position.y/tan(compassStartPoint) + cols/2;
+	tempXFront = pose.position.y/tan(compassStartPoint + 180) + cols/2;
 	tempXBack = pose.position.y/tan(compassStartPoint) + cols/2;
       }
       
@@ -173,15 +173,28 @@ private:
   }
   void evaluateCluster()
   {
+    int turn;
     cv::Mat leftPoints(LeftCluster.size(), 2, CV_32F);
     cv::Mat rightPoints(RightCluster.size(), 2, CV_32F);
     
-    evaluatePoints(leftPoints, LeftCluster);
-    evaluatePoints(rightPoints, RightCluster);
-    
-    
+    //TODO: see if need to turn SHIVAM
+
+    if(turn)
+    {
+      switchRows(leftPoints, LeftCluster);
+      swithcRows(rightPoints, RightCluster);
+
+      //TODO: Publish two points SHIVAM 
+    }
+    else
+    {
+      straight(leftPoints, LeftCluster);
+      straingt(rightPoints, RightCluster);
+
+      //TODO: Publish four points KAYL
+    }
   }
-  void evaluatePoints(cv::Mat points,  std::vector<cv::Point2f>& cluster)
+  void straight(cv::Mat points,  std::vector<cv::Point2f>& cluster)
   {
     int K = 2, attempts = 30, flags = cv::KMEANS_PP_CENTERS;
     cv::Mat labels, centers;
@@ -199,6 +212,10 @@ private:
 
     //draw line between two points
     cv::line(image, point1, point2, cv::Scalar(0,0,255), 2, 8, 0);
+  }
+  void switchRows(cv::Mat points,  std::vector<cv::Point2f>& cluster)
+  {
+    //TODO: get last point and publish KAYL
   }
 };
 
