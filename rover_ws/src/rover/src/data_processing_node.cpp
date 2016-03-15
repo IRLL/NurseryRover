@@ -36,17 +36,19 @@ private:
   ros::NodeHandle nh;
   
   ros::Subscriber sub;
-  ros::Publisher pub;
-  
-  double data[4];
-  
+  ros::Publisher straightPub;
+  ros::Publisher switchRowsPub;
+ 
   //Clusters
   std::vector<cv::Point2f> RightCluster;
   std::vector<cv::Point2f> LeftCluster;
   
+  //Published data
+  geometry_msgs::PoseArray straightPoses;
+  geometry_msgs::PoseArray switchRowPoses;
+
   //values
-  int maxPointDifference;
-  int max_distance;
+  int maxDistance;
   int rows;
   int cols;
 
@@ -55,6 +57,8 @@ private:
   int compassValue;
   int compassStartPoint;
   
+  double slope;
+
   cv::Mat image;
 	
 public:
@@ -78,18 +82,18 @@ public:
     
     //Initialize max max_distance
     maxPointDifference = 20;
-    max_distance = 1000;//100;
     
-    //TODO: Correct this advertise - KAYL
-    pub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 2);
+    //Pub and Sub
+    straightPub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 4);
+    switchRowsPub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/points", 2);
     sub = nh.subscribe("/lidar_data/points_data", 360, &DataProcessing::ProcessingCallback, this);
     sub = nh.subscribe("/arduino/compass_value", 1, &DataProcessing::CompassCallback, this);
     sub = nh.subscribe("/arduino/compass_start_point", 1, &DataProcessing::CompassStartPointCallback, this);
     
     cv::namedWindow(OPENCV_WINDOW);
-    
   }
-  
+
+private: 
   void ProcessingCallback(const geometry_msgs::PoseArray msg)
   {
     //Reinitialize image to zeros
@@ -112,14 +116,23 @@ public:
   }
   void CompassCallback(const std_msgs::Float32 msg)
   {
+    int x, y;
     compassValue = msg.data;
+    
+    //Calculate front and rear degree
+    frontDegree = (compassStartPoint - compassValue) + 90;
+    backDegree = frontDegree + 180;
+
+    //Calculate slope
+    x = sin(frontDegree) + 400;
+    y = cos(frontDegree) + 400;
+    slope = (x - rover_cols) / (y - rover_rows); 
   }
   void CompassStartPointCallback(const std_msgs::Float32 msg)
   {
     compassStartPoint = msg.data;
   }
 
-private:
   void setClusters(const geometry_msgs::PoseArray msg)
   {
     geometry_msgs::Pose pose;
@@ -128,46 +141,32 @@ private:
     if(compassStartPoint == -1)
       return;
     
-    double tempXFront, tempXBack, poseDegree;
-    
+    double xFront;
+
     for(int i =  0; i < msg.poses.size(); i++)
     {
       pose = msg.poses.at(i);
       poseDegree = atan(pose.position.y/pose.position.x);
-      
-      //Set temporary variables
-      if(compassStartPoint >= 180)
+     
+
+      //For the pose find the x value of the center of the rows
+      xFront =  pose.position.y / slope;
+
+      //Compare the two x values and see if its good data or not
+      if(maxDistance >= abs(xFront - pose.position.x))
       {
-	tempXFront = pose.position.y/tan(compassStartPoint) + cols/2;
-	tempXBack = pose.position.y/tan(compassStartPoint - 180) + cols/2;
-      }
-      else
-      {
-	tempXFront = pose.position.y/tan(compassStartPoint + 180) + cols/2;
-	tempXBack = pose.position.y/tan(compassStartPoint) + cols/2;
-      }
-      
-      if(max_distance >= abs(tempXFront - pose.position.x))
-      {
-	if(tempXFront < pose.position.x) 
-	{
+        //Data is in range
+        //Determine which cluster to add to
+        if(xFront < pose.position.x)
+        {
+          //Add to right cluster
 	  RightCluster.push_back(cv::Point2f(pose.position.x,pose.position.y));
-	}
-	else
-	{
+        }
+        else
+        {
+          //Add to left cluster
 	  LeftCluster.push_back(cv::Point2f(pose.position.x,pose.position.y));
-	}
-      }
-      else if(max_distance >= abs(tempXBack - pose.position.x))
-      {
-	if(tempXBack < pose.position.y) 
-	{
-	  RightCluster.push_back(cv::Point2f(pose.position.x,pose.position.y));
-	}
-	else
-	{
-	  LeftCluster.push_back(cv::Point2f(pose.position.x,pose.position.y));
-	}
+        }
       }
     }
   }
@@ -191,7 +190,9 @@ private:
       straight(leftPoints, LeftCluster);
       straingt(rightPoints, RightCluster);
 
-      //TODO: Publish four points KAYL
+      //Publish four points KAYL
+      straightPub.publish(straightPoses);
+      straightPoses.poses.clear();  
     }
   }
   void straight(cv::Mat points,  std::vector<cv::Point2f>& cluster)
@@ -212,10 +213,26 @@ private:
 
     //draw line between two points
     cv::line(image, point1, point2, cv::Scalar(0,0,255), 2, 8, 0);
+    
+    //Convert points to poses and push to pose array
+    geometry_msgs::Pose pose;
+    pose.position = point1;
+    straightPoses.poses.push_back(pose);
+    
+    pose.position = point2;
+    straightPoses.poses.push_back(pose);
+    
   }
   void switchRows(cv::Mat points,  std::vector<cv::Point2f>& cluster)
   {
+    cv::Point2f point;
+
+    point.x = 0;
     //TODO: get last point and publish KAYL
+    for(int i = 0; i < cluster.size(); i++)
+    { 
+      //iterate through and find greatest point  
+    }
   }
 };
 

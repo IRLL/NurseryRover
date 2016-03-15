@@ -7,8 +7,9 @@
 /*
  * Notes:
  * 	1. Message Notes:
- *		A. 1 = left distance
- *		B. 2 = right distance
+ *		A. 4 points
+ *		B. First two on left
+ *		C. Second two on right
  * 	2. Motor Speed:
  * 		A. Values range from 127 to -127
  * 
@@ -22,7 +23,7 @@
 
 #include <ros/console.h>
 
-class CommandConverter
+class StraightCommandConverter
 {
 private:
   ros::NodeHandle _nh;
@@ -33,49 +34,46 @@ private:
   ros::Publisher pub;
   ros::Subscriber sub;
   
-  int _left_distance;
-  int _right_distance;
-  
   int _left_motor_speed;
   int _right_motor_speed;
-  int turn_significance;
+
+  int roverX, roverY;
 
 public:
-  CommandConverter()
+  StraightCommandConverter()
   {
     turn_significance = 0;
+
+    roverX = 400;
+    roverY = 400;
 
     pub = _nh.advertise<std_msgs::Int32MultiArray>("/command_converter/commands", 2);
     sub = _nh.subscribe("/lidar_data/cluster", 4, &CommandConverter::commandConverterCallback, this);
   }
 	
 private:
-  void commandConverterCallback(const std_msgs::Int32MultiArray::ConstPtr& msg)
+  void commandConverterCallback(const geometry_msgs::PoseArray msg)
   {
-    int temp_array[4];
-    int i = 0;
-    
-    //Set values
-    for(std::vector<int>::const_iterator it = msg->data.begin(); it != msg->data.end(); ++it)
-    {
-      temp_array[i] = *it;
-      i++;
-      
-    }
-    
-    //Set left and right distances
-    if(temp_array[0] < temp_array[2])
-    {
-      _left_distance = abs(temp_array[0] - 400);
-      _right_distance = abs(temp_array[2] - 400); 
-    }
-    else
-    {
-      _left_distance = abs(temp_array[2] - 400);
-      _right_distance = abs(temp_array[0] - 400);
-    }
-    
-    setMotorSpeed(_left_distance, _right_distance);
+    double slope, leftSlope, rightSlope, leftDistance, rightDistance;
+    double leftX, rightX;
+    //Calculate average slope of left and right lines
+    leftSlope = (msg.poses.at(0).position.x - msg.poses.at(1).position.x)/(msg.poses.at(0).position.y - msg.poses.at(1).position.y);
+    rightSlope = (msg.poses.at(2).position.x - msg.poses.at(3).position.x)/(msg.poses.at(2).position.y - msg.poses.at(3).position.y);
+
+    slope = (leftSlope + rightSlope) / 2;
+  
+    //Calculate x of left and right
+    //Formula : y-y1=m(x-x1) -> x1=x-(y-y1)/m  
+    leftX = msg.poses.at(0).position.x - (msg.poses.at(0).position.y - roverY) / leftSlope;
+    rightX = msg.poses.at(2).position.x - (msg.poses.at(2).position.y - roverY) / rightSlope;
+
+    //Calculate distances
+    leftDistance = abs(roverX - leftX);
+    rightDistance = abs(roverX - rightX);
+
+    //TODO: redo this function and have it integrate slope in speeds
+    //Set motor speed
+    setMotorSpeed(leftDistance, rightDistance);
     
     assignMotorSpeedData();
     
@@ -85,7 +83,7 @@ private:
     //ROS_INFO("Left: %d	Right: %d", _left_distance, _right_distance);
   }
   
-  void setMotorSpeed(int left_d, int right_d)
+  void setMotorSpeed(double left_d, double right_d)
   {
     if(left_d == 0 && right_d == 0)
     {
