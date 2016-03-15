@@ -221,18 +221,25 @@ private:
     
     pose.position = point2;
     straightPoses.poses.push_back(pose);
-    
   }
   void switchRows(cv::Mat points,  std::vector<cv::Point2f>& cluster)
   {
-    cv::Point2f point;
+    int i;
+    cv::Point2f maxPoint, tempPoint;
 
-    point.x = 0;
+    maxPoint.x = 0;
     //TODO: get last point and publish KAYL
+    //iterate through and find greatest point  
     for(int i = 0; i < cluster.size(); i++)
     { 
-      //iterate through and find greatest point  
+      tempPoint = cluster[i];
+      if(tempPoint.y > maxPoint.y)
+        maxPoint = tempPoint;
     }
+    
+    geometry_msgs::Pose pose;
+    pose.position = maxPoint;
+    switchRowPoses.poses.push_back(pose);
   }
 };
 
