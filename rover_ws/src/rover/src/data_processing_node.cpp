@@ -37,7 +37,9 @@ private:
   
   ros::Subscriber sub;
   ros::Publisher straightPub;
+  ros::Publisher turnPub;
   ros::Publisher switchRowsPub;
+
  
   //Clusters
   std::vector<cv::Point2f> RightCluster;
@@ -46,6 +48,7 @@ private:
   //Published data
   geometry_msgs::PoseArray straightPoses;
   geometry_msgs::PoseArray switchRowPoses;
+  geometry_msgs::PoseArray turnPoses;
 
   //values
   int maxDistance;
@@ -84,6 +87,7 @@ public:
     maxPointDifference = 20;
     
     //Pub and Sub
+    turnPub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 2);
     straightPub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/clusters", 4);
     switchRowsPub = nh.advertise<geometry_msgs::PoseArray>("/data_processing/points", 2);
     sub = nh.subscribe("/lidar_data/points_data", 360, &DataProcessing::ProcessingCallback, this);
@@ -175,20 +179,29 @@ private:
     int turn;
     cv::Mat leftPoints(LeftCluster.size(), 2, CV_32F);
     cv::Mat rightPoints(RightCluster.size(), 2, CV_32F);
+
     
     //TODO: see if need to turn SHIVAM
 
-    if(turn)
-    {
-      switchRows(leftPoints, LeftCluster);
-      swithcRows(rightPoints, RightCluster);
+    left_turn_point = switchRows(leftPoints, LeftCluster);
+    right_turn_point = switchRows(rightPoints, RightCluster);
 
-      //TODO: Publish two points SHIVAM 
-    }
+
+      
+      if (left_turn_point > 400 && right_turn_point > 400)
+      {
+        //we say its time to turn
+        turn_over(leftPoints, LeftCluster)
+        turn_over(rightPoints, RightCluster)
+
+        turnPub.publish(turnPoses);
+        turnPoses.poses.clear();  
+      }
+     
     else
     {
       straight(leftPoints, LeftCluster);
-      straingt(rightPoints, RightCluster);
+      straight(rightPoints, RightCluster);
 
       //Publish four points KAYL
       straightPub.publish(straightPoses);
@@ -222,7 +235,7 @@ private:
     pose.position = point2;
     straightPoses.poses.push_back(pose);
   }
-  void switchRows(cv::Mat points,  std::vector<cv::Point2f>& cluster)
+  int switchRows(cv::Mat points,  std::vector<cv::Point2f>& cluster)
   {
     int i;
     cv::Point2f maxPoint, tempPoint;
@@ -240,7 +253,33 @@ private:
     geometry_msgs::Pose pose;
     pose.position = maxPoint;
     switchRowPoses.poses.push_back(pose);
+    return maxPoint;
   }
+  //TODO: Publish two points SHIVAM 
+  void turn_over(cv::Mat points,  std::vector<cv::Point2f>& cluster)
+  {
+    int K = 2, attempts = 30, flags = cv::KMEANS_PP_CENTERS;
+    cv::Mat labels, centers;
+    cv::Point2f tempPoint;
+    
+    for(int i = 0; i < cluster.size(); i++)
+    {
+      tempPoint = cluster[i];
+      points.at<float>(i, 0) = tempPoint.x;
+      points.at<float>(i, 1) = tempPoint.y;
+    }
+    cv::kmeans(points,K,labels,cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0),attempts,flags, centers);
+    cv::Point2f point1 = cv::Point2f(abs(centers.at<float>(0, 0)), abs(centers.at<float>(0, 1)));
+    cv::Point2f point2 = cv::Point2f(abs(centers.at<float>(1, 0)), abs(centers.at<float>(1, 1)));
+
+    geometry_msgs::Pose pose;
+    pose.position = point1;
+    turnPoses.poses.push_back(pose);
+    
+    pose.position = point2;
+    turnPoses.poses.push_back(pose);
+  }
+
 };
 
 int main(int argc, char** argv)
