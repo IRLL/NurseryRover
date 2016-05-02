@@ -180,9 +180,6 @@ private:
     cv::Mat leftPoints(LeftCluster.size(), 2, CV_32F);
     cv::Mat rightPoints(RightCluster.size(), 2, CV_32F);
 
-    
-    //TODO: see if need to turn SHIVAM
-
     left_turn_point = switchRows(leftPoints, LeftCluster);
     right_turn_point = switchRows(rightPoints, RightCluster);
 
